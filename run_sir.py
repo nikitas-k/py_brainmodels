@@ -8,8 +8,8 @@ __author__ = "Nikitas Koussis"
 __license__ = "GPL-3.0"
 __email__ = "nikitas.koussis@gmail.com"
 
-def linear_threshold(G, L, seeds, threshold=0.5):
-    """Return the active nodes of each diffusion step by linear threshold model.
+def SIR_model(G, L, seeds, beta=0.05, gamma=0.005):
+    """Return the active nodes of each diffusion step by SIR model.
     Parameters
     ----------
     G : networkx graph
@@ -18,23 +18,26 @@ def linear_threshold(G, L, seeds, threshold=0.5):
         Length weights
     seeds: list of nodes
         The seed nodes of the graph
+	beta: float
+	    The 'normal' probability of activation of that node given one neighbour
+    gamma: float
+	    Flat probability of a node being 'removed' i.e. deactivated.
     Return
     ------
         i_edges : list of activated edges, as well as 'time' of activation
     Notes
     -----
-    1. Each node is supposed to have an attribute "threshold".  If not, the
-    default value is given (0.5).
-    2. Each edge is supposed to have an attribute "influence".  If not, the
-    default value is given (1/in_degree)
-    3. This model does not currently diffuse over a certain number of steps -
+    1. Each node is supposed to have an attribute "beta".  If not, the
+    default value is given (0.05).
+    2. This model does not currently diffuse over a certain number of steps -
     it simply diffuses until it cannot activate any more regions.
-    4. 'Time' of diffusion is defined as the distance weight [L.edge(i,j)]
-    divided by the weighting of the 
+    3. 'Time' of diffusion is defined as the distance weight [L.edge(i,j)]
+    divided by the weighting of the graph G between each node.
     References
     ----------
-    [1] Granovetter, Mark. Threshold models of collective behavior.
-    The American journal of sociology, 1978.
+    [1] Kermack and A. McKendrick, “A Contribution to the Mathematical Theory of Epidemics,”
+	Proceedings of the Royal Society of London. Series A, Containing Papers of a Mathematical and Physical Character, 
+	vol. 115, no. 772, pp. 700–721, Aug. 1927
     Examples
     --------
     >>> G = nx.Graph()
@@ -43,7 +46,7 @@ def linear_threshold(G, L, seeds, threshold=0.5):
     >>> L = nx.Graph()
     >>> L.add_edges_from([(1,2), (1,3), (1,5), (2,1), (3,2), (4,2), (4,3), \
     >>>   (4,6), (5,3), (5,4), (5,6), (6,4), (6,5)])
-    >>> layers = run_ltm.linear_threshold(G, L, threshold=0.05)
+    >>> layers = run_sir.SIR_model(G, L, [1], beta=0.05, gamma=0.005)
 """
 
     if type(G) == nx.MultiGraph or type(G) == nx.MultiDiGraph:
@@ -54,21 +57,6 @@ def linear_threshold(G, L, seeds, threshold=0.5):
     for s in seeds:
         if s not in G.nodes():
             raise Exception("seed", s, "is not in graph")
-
-    # init thresholds
-    for n in G.nodes():
-        G.node[n]['threshold'] = threshold
-        if G.node[n]['threshold'] > 1:
-            raise Exception("node threshold:", G.node[n]['threshold'], \
-            "cannot be larger than 1")
-
-    # init influences
-    deg = G.degree()
-    for e in G.edges():
-        G[e[0]][e[1]]['influence'] = 1.0 / deg[e[1]]
-        if G[e[0]][e[1]]['influence'] > 1:
-           raise Exception("edge influence:", G[e[0]][e[1]]['influence'], \
-            "cannot be larger than 1")
 
     # perform diffusion
     A = copy.deepcopy(seeds)
@@ -93,6 +81,7 @@ def _diffuse_one_round(G, L, A, time):
     nbs = G.neighbors(last_active)
     i_edges = []
     taus = []
+	eventp = np.random.random_sample()
     for nb in nbs:
         if nb not in A:
             try:
@@ -110,8 +99,11 @@ def _diffuse_one_round(G, L, A, time):
             except:
                 continue
             if t <= tau:
-                true_actives.append(active)
-        if _influence_sum(G, true_actives, targ) >= G.node[targ]['threshold']:
+			    if eventp < gamma:
+				    A.remove(active)
+				else:
+                    true_actives.append(active)
+        if eventp < beta * len(true_actives):
             activated_nodes_of_this_round.add(targ)
             A.extend(list(activated_nodes_of_this_round))
             for a in true_actives:
@@ -123,14 +115,5 @@ def _diffuse_one_round(G, L, A, time):
 
     if len(A) == len_old:
         return None, None, None
-
-
-
-
-def _influence_sum(G, froms, to):
-    influence_sum = 0.0
-    for f in froms:
-        influence_sum += G[f][to]['influence']
-    return influence_sum
 
 
