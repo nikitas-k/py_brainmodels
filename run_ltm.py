@@ -43,7 +43,7 @@ def linear_threshold(G, L, seeds, threshold=0.5):
     >>> L = nx.Graph()
     >>> L.add_edges_from([(1,2), (1,3), (1,5), (2,1), (3,2), (4,2), (4,3), \
     >>>   (4,6), (5,3), (5,4), (5,6), (6,4), (6,5)])
-    >>> layers = run_ltm.linear_threshold(G, L, threshold=0.05)
+    >>> layers = run_ltm.linear_threshold(G, L, [1], threshold=0.05)
 """
 
     if type(G) == nx.MultiGraph or type(G) == nx.MultiDiGraph:
