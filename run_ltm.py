@@ -105,10 +105,7 @@ def _diffuse_one_round(G, L, A, time):
         actives = list(set(G.neighbors(targ)).intersection(set(A)))
         true_actives = []
         for active in actives:
-            try:
-                t = np.divide(L.edges[last_active, nb]['weight'], G.edges[active, targ]['weight'])
-            except:
-                continue
+            t = np.divide(L.edges[active, targ]['weight'], G.edges[active, targ]['weight'])
             if t <= tau:
                 true_actives.append(active)
         if _influence_sum(G, true_actives, targ) >= G.node[targ]['threshold']:
