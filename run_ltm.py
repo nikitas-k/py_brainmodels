@@ -30,7 +30,11 @@ def linear_threshold(G, L, seeds, threshold=0.5):
     3. This model does not currently diffuse over a certain number of steps -
     it simply diffuses until it cannot activate any more regions.
     4. 'Time' of diffusion is defined as the distance weight [L.edge(i,j)]
-    divided by the weighting of the 
+    divided by the fibre density weight [G.edge(i,j)]
+    5. Primarily to be used for exploring undirected connectomes generated 
+    from white matter tractography. Could also be used for other metrics, 
+    such as multi-modal functional-structural networks.
+    
     References
     ----------
     [1] Granovetter, Mark. Threshold models of collective behavior.
@@ -43,13 +47,20 @@ def linear_threshold(G, L, seeds, threshold=0.5):
     >>> L = nx.Graph()
     >>> L.add_edges_from([(1,2), (1,3), (1,5), (2,1), (3,2), (4,2), (4,3), \
     >>>   (4,6), (5,3), (5,4), (5,6), (6,4), (6,5)])
-    >>> layers = run_ltm.linear_threshold(G, L, [1], threshold=0.05)
+    >>> i_nodes = run_ltm.linear_threshold(G, L, [1], threshold=0.05)
 """
 
     if type(G) == nx.MultiGraph or type(G) == nx.MultiDiGraph:
         raise Exception( \
         "linear_threshold() is not defined for graphs with multiedges.")
-
+    # make sure graphs are equal in size
+    if len(list(G.nodes)) != len(list(L.nodes)):
+        raise Exception("Graphs must have the same dimensions.")
+        
+    # make sure graphs are undirected
+    if nx.is_undirected(G) is False or nx.is_undirected(L) is False:
+        raise Exception("This function only works on undirected graphs.")
+        
     # make sure the seeds are in the graph
     for s in seeds:
         if s not in G.nodes():
