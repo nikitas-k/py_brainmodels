@@ -81,7 +81,7 @@ def _diffuse_one_round(G, L, A, time):
     nbs = G.neighbors(last_active)
     i_edges = []
     taus = []
-	eventp = np.random.random_sample()
+    eventp = np.random.random_sample()
     for nb in nbs:
         if nb not in A:
             try:
@@ -99,9 +99,9 @@ def _diffuse_one_round(G, L, A, time):
             except:
                 continue
             if t <= tau:
-			    if eventp < gamma:
-				    A.remove(active)
-				else:
+	        if eventp < gamma:
+		    A.remove(active)
+		else:
                     true_actives.append(active)
         if eventp < beta * len(true_actives):
             activated_nodes_of_this_round.add(targ)

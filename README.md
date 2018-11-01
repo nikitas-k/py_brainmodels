@@ -1,4 +1,4 @@
-# Brain network modelling
+# Brain network diffusion modelling
 Diffusion models of cascading activation in brain networks. Based on applications of social and infectious models to brain graph-theoretical networks.
 
 #### Dependencies:
