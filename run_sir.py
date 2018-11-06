@@ -52,6 +52,8 @@ def SIR_model(G, L, seeds, beta=0.05, gamma=0.005):
     if type(G) == nx.MultiGraph or type(G) == nx.MultiDiGraph:
         raise Exception( \
         "linear_threshold() is not defined for graphs with multiedges.")
+    if len(list(G.nodes)) != len(list(L.nodes)):
+        raise Exception("Graphs must have the same dimensions.")
 
     # make sure the seeds are in the graph
     for s in seeds:
@@ -64,23 +66,35 @@ def SIR_model(G, L, seeds, beta=0.05, gamma=0.005):
         # perform diffusion until no more nodes can be activated
         return _diffuse_all(G, L, A, seeds)
 
+    for n in G.nodes():
+	G.node[n]['beta'] = beta
+	if G.node[n]['beta'] > 1:
+	    raise Exception("beta:", beta, \
+			    "cannot be larger than 1")
+
 def _diffuse_all(G, L, A, seeds):
     i_nodes = [ ]
+    r = []
     time = 0.0
     while True:
-        A, i_edges, tau = _diffuse_one_round(G, L, A, time)
+        A, i_edges, r_, tau = _diffuse_one_round(G, L, A, r, time, gamma)
         if A == None:
-            return i_nodes
+            return i_nodes, list(set(r))
         time += tau
         i_nodes.extend(i_edges)
+	r.extend(r_)
 
-def _diffuse_one_round(G, L, A, time):
+def _diffuse_one_round(G, L, A, r, time, gamma):
     activated_nodes_of_this_round = set()
     len_old = len(A)
-    last_active = A[-1]
+    try:
+	last_active = A[-1]
+    except:
+	return None, None, None, None
     nbs = G.neighbors(last_active)
     i_edges = []
     taus = []
+    r_ = []
     eventp = np.random.random_sample()
     for nb in nbs:
         if nb not in A:
@@ -95,25 +109,26 @@ def _diffuse_one_round(G, L, A, time):
         true_actives = []
         for active in actives:
             try:
-                t = np.divide(L.edges[last_active, nb]['weight'], G.edges[active, targ]['weight'])
+                t = np.divide(L.edges[active, targ]['weight'], G.edges[active, targ]['weight'])
             except:
                 continue
             if t <= tau:
-	        if eventp < gamma:
-		    A.remove(active)
-		else:
-                    true_actives.append(active)
-        if eventp < beta * len(true_actives):
+		true_actives.append(active)
+        if eventp < G.node[targ]['beta'] * len(true_actives):
             activated_nodes_of_this_round.add(targ)
             A.extend(list(activated_nodes_of_this_round))
             for a in true_actives:
                 i_edges.append((a, targ, time+tau))
-            return A, i_edges, tau
-
         else:
             continue
+	
+    for nd in A:
+	if eventp < gamma:
+	    r_.append(nd)
+	    A.remove(nd)
 
     if len(A) == len_old:
         return None, None, None
-
+    
+    return A, i_edges, r_, tau
 
